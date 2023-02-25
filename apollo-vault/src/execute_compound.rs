@@ -1,7 +1,7 @@
 use apollo_cw_asset::{Asset, AssetList};
 use cosmwasm_std::{
-    attr, to_binary, Decimal, DepsMut, Env, Event, MessageInfo, Response, StdError, StdResult,
-    Uint128,
+    attr, to_binary, Decimal, DepsMut, Env, Event, MessageInfo, ReplyOn, Response, StdError,
+    StdResult, SubMsg, Uint128,
 };
 use cw_dex::traits::{Pool, Stake};
 use cw_vault_token::VaultToken;
@@ -63,11 +63,17 @@ where
             attr("base_token_balance", base_token_balance),
         ]);
 
-        Ok(claim_rewards_res
-            .add_message(sell_rewards)
-            .add_message(provide_liquidity)
-            .add_message(stake)
-            .add_event(event))
+
+        let sub_msgs = vec![sell_rewards, provide_liquidity, stake]
+            .into_iter()
+            .map(|msg| SubMsg {
+                id: 0,
+                msg,
+                gas_limit: None,
+                reply_on: ReplyOn::Always,
+            });
+
+        Ok(claim_rewards_res.add_submessages(sub_msgs).add_event(event))
     }
 
     /// Sells all the reward tokens in the contract for the underlying tokens of
